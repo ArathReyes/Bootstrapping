@@ -35,7 +35,7 @@ def UltDiaHabil(x,inhabiles, diahabant):
 
 n=390 # Number of coupons
 # Esta es la lista de los días inhabiles que proporcionamos de manera particular
-inhabiles = [datetime(2022,3,24), datetime(2022, 4, 21)]
+inhabiles = [datetime(2022,3,25), datetime(2022, 4, 22)]
 tasas = pd.read_excel("C:\\Users\\Arath Reyes\\Desktop\\Python\\Quantitative Finance\\data\\datos.xlsx")
 tasas.rename(columns = {'Unnamed: 1':'Tasa'}, inplace = True)
 tasas = tasas[["Tasa"]]
@@ -45,27 +45,29 @@ tasas["Cupon"] = ["1dia", 1,3,6,9,13,26,39,52,65,91,130,195,260,390]
 CALENDARIO
 """
 
-IRS = pd.DataFrame()
-IRS["Cupon"] = list(range(1,n+1))
+df = pd.DataFrame()
+df["Cupon"] = list(range(1,n+1))
 
-IRS["Start Date"] = spot + (IRS["Cupon"]-1)*timedelta(days=28)
-IRS["Final Date"] = spot + IRS["Cupon"]*timedelta(days=28)
-IRS["Payment Date"] = IRS["Final Date"] # En México funciona así
-IRS["Fixing Date"]  = IRS["Start Date"] - BDay(1)
+df["Start Date"] = spot + (df["Cupon"]-1)*timedelta(days=28)
+df["Final Date"] = spot + df["Cupon"]*timedelta(days=28)
+df["Payment Date"] = df["Final Date"] # En México funciona así
+df["Fixing Date"]  = df["Start Date"] - BDay(1)
 
 # Correción de días hábiles
 
-aux = IRS["Fixing Date"]
-aux=[UltDiaHabil(i,inhabiles,diahabant) for i in aux]
-IRS["Fixing Date"] = aux
-del aux
+df["Fixing Date"] = df["Fixing Date"].apply(UltDiaHabil, args = (inhabiles,diahabant))
 
-IRS = IRS[["Cupon","Fixing Date", "Start Date", "Final Date", "Payment Date"]]
+# aux = IRS["Fixing Date"]
+# aux=[UltDiaHabil(i,inhabiles,diahabant) for i in aux]
+# IRS["Fixing Date"] = aux
+# del aux
+
+df = df[["Cupon","Fixing Date", "Start Date", "Final Date", "Payment Date"]]
 
 # Tau
-IRS["Tau"] = (IRS["Final Date"] - IRS["Start Date"]).dt.days/conv
+df["Tau"] = (df["Final Date"] - df["Start Date"]).dt.days/conv
 
 
 # Agregar las tasas
 
-IRS = pd.merge(IRS,tasas, on = "Cupon", how="left")
+df = pd.merge(df,tasas, on = "Cupon", how="left")
