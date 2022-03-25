@@ -17,7 +17,7 @@ from scipy import interpolate #Para interpolación linear y spline
 # today = datetime(2022,3,3) # yy/mm/dd
 today = datetime.now()
 today = datetime(today.year, today.month, today.day)
-spot = today + BDay(days = 1)
+spot = today + BDay(1)
 
 #today = today.strftime("%d/%m/%Y")
 diahabant = True
