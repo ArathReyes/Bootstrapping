@@ -54,35 +54,37 @@ tasas["Cupon"] = ["1dia", 1,3,6,9,13,26,39,52,65,91,130,195,260,390]
 CALENDARIO
 """
 
-Data = pd.DataFrame()
-Data["Cupon"] = list(range(1,n+1))
+df = pd.DataFrame()
+df["Cupon"] = list(range(1,n+1))
 
-Data["Start Date"] = spot + (Data["Cupon"]-1)*timedelta(days=28)
-Data["Final Date"] = spot + Data["Cupon"]*timedelta(days=28)
-Data["Payment Date"] = Data["Final Date"] # En México funciona así
-Data["Fixing Date"]  = Data["Start Date"] - BDay(1)
+df["Start Date"] = spot + (df["Cupon"]-1)*timedelta(days=28)
+df["Final Date"] = spot + df["Cupon"]*timedelta(days=28)
+df["Payment Date"] = df["Final Date"] # En México funciona así
+df["Fixing Date"]  = df["Start Date"] - BDay(1)
 
 # Correción de días hábiles
 
-aux = Data["Fixing Date"]
-aux=[UltDiaHabil(i,inhabiles,diahabant) for i in aux]
-Data["Fixing Date"] = aux
-del aux
+df["Fixing Date"] = df["Fixing Date"].apply(UltDiaHabil, args = (inhabiles,diahabant))
 
-Data = Data[["Cupon","Fixing Date", "Start Date", "Final Date", "Payment Date"]]
+# aux = IRS["Fixing Date"]
+# aux=[UltDiaHabil(i,inhabiles,diahabant) for i in aux]
+# IRS["Fixing Date"] = aux
+# del aux
+
+df = df[["Cupon","Fixing Date", "Start Date", "Final Date", "Payment Date"]]
 
 # Tau
-Data["Tau"] = (Data["Final Date"] - Data["Start Date"]).dt.days/conv
+df["Tau"] = (df["Final Date"] - df["Start Date"]).dt.days/conv
 
 
 # Agregar las tasas
 
-Data = pd.merge(Data,tasas, on = "Cupon", how="left")
+df = pd.merge(df,tasas, on = "Cupon", how="left")
 
 #Auxiliar para convertir a número
-aux_0=pd.isnull(Data["Tasa"])
-aux_1=(Data["Payment Date"][aux_0==False].dt.strftime("%Y%m%d").astype(int)).to_numpy()
-aux_2=(Data["Tasa"][aux_0==False]).to_numpy()
+aux_0=pd.isnull(df["Tasa"])
+aux_1=(df["Payment Date"][aux_0==False].dt.strftime("%Y%m%d").astype(int)).to_numpy()
+aux_2=(df["Tasa"][aux_0==False]).to_numpy()
 
 #Qué tipo decidimos
 if continuo== True:
@@ -94,12 +96,13 @@ else:
 int_lin=interpolate.interp1d(aux_1,aux_2,kind=metodo)
 
 #fechas faltantes
-aux_3=(Data["Payment Date"][aux_0].dt.strftime("%Y%m%d").astype(int)).to_numpy()
+aux_3=(df["Payment Date"][aux_0].dt.strftime("%Y%m%d").astype(int)).to_numpy()
 
 #llenamos
-Data.loc[Data.Tasa.isnull(), 'Tasa'] = int_lin(aux_3)
+df.loc[df.Tasa.isnull(), 'Tasa'] = int_lin(aux_3)
 
 del aux_0,aux_1,aux_2,aux_3 #ya no lo necesitamos
 
 #descuento a 1 día
 desc_1_dia=np.exp(-tasas["Tasa"][0]*((spot-today).days)/conv)
+
