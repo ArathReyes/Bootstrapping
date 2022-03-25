@@ -17,7 +17,7 @@ from scipy import interpolate #Para interpolación linear y spline
 # today = datetime(2022,3,3) # yy/mm/dd
 today = datetime.now()
 today = datetime(today.year, today.month, today.day)
-spot = today + timedelta(days = 1)
+spot = today + BDay(days = 1)
 
 #today = today.strftime("%d/%m/%Y")
 diahabant = True
@@ -105,4 +105,15 @@ del aux_0,aux_1,aux_2,aux_3 #ya no lo necesitamos
 
 #descuento a 1 día
 desc_1_dia=np.exp(-tasas["Tasa"][0]*((spot-today).days)/conv)
+
+def descuentos(df=df,desc_1_dia=desc_1_dia):
+    x=df["Tasa"]
+    tau=df["Tau"]
+    aux=np.array(np.zeros([len(x)]))
+    aux[0]=desc_1_dia*(1+x[0]*tau[0])**(-1)
+    for i in range(1,len(x)):
+        aux[i]=(desc_1_dia-x[i]*sum(tau[:i]*aux[:i]))/(1+x[i]*tau[i])
+    return(aux)
+            
+df["Descuentos"]=descuentos(df,desc_1_dia)
 
