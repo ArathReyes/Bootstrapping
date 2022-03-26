@@ -21,7 +21,7 @@ spot = today + BDay(1)
 
 #today = today.strftime("%d/%m/%Y")
 diahabant = True
-lineal= True
+lineal= False
 # Dentro de la función
 
 act_360 = True
@@ -121,4 +121,6 @@ if lineal:
             
     df["Descuentos"]=descuentos(df,desc_1_dia)
 else:
-    
+    df["Plazo"]=(df["Payment Date"]).apply(lambda x: (x-datetime(today.year, 
+                                                                 today.month, 
+                                                                 today.day)).days/conv)
