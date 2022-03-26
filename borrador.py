@@ -21,7 +21,7 @@ spot = today + BDay(1)
 
 #today = today.strftime("%d/%m/%Y")
 diahabant = True
-continuo= False
+lineal= True
 # Dentro de la función
 
 act_360 = True
@@ -89,33 +89,36 @@ aux_1=(df["Payment Date"][aux_0==False]).apply(lambda x: (x-datetime(today.year,
 aux_2=(df["Tasa"][aux_0==False]).to_numpy()
 
 #Qué tipo decidimos
-if continuo== True:
-    metodo="spline"
-else:
+if lineal== True:
     metodo="linear"
+else:
+    metodo="spline"
 
-#Interpolación elegida
-int_lin=interpolate.interp1d(aux_1,aux_2,kind=metodo)
-
-#fechas faltantes
-aux_3=(df["Payment Date"][aux_0]).apply(lambda x: (x-datetime(today.year, 
-                                                             today.month, 
-                                                             today.day)).days)
-#llenamos
-df.loc[df.Tasa.isnull(), 'Tasa'] = int_lin(aux_3)
-
-del aux_0,aux_1,aux_2,aux_3 #ya no lo necesitamos
-
-#descuento a 1 día
-desc_1_dia=np.exp(-tasas["Tasa"][0]*((spot-today).days)/conv)
-
-def descuentos(df=df,desc_1_dia=desc_1_dia):
-    x=df["Tasa"]
-    tau=df["Tau"]
-    aux=np.array(np.zeros([len(x)]))
-    aux[0]=desc_1_dia*(1+x[0]*tau[0])**(-1)
-    for i in range(1,len(x)):
-        aux[i]=(1-x[i]*sum(tau[:i]*aux[:i]))/(1+x[i]*tau[i])
-    return(aux)
+if lineal:
+    #Interpolación elegida
+    int_lin=interpolate.interp1d(aux_1,aux_2,kind=metodo)
+    
+    #fechas faltantes
+    aux_3=(df["Payment Date"][aux_0]).apply(lambda x: (x-datetime(today.year, 
+                                                                 today.month, 
+                                                                 today.day)).days)
+    #llenamos
+    df.loc[df.Tasa.isnull(), 'Tasa'] = int_lin(aux_3)
+    
+    del aux_0,aux_1,aux_2,aux_3 #ya no lo necesitamos
+    
+    #descuento a 1 día
+    desc_1_dia=np.exp(-tasas["Tasa"][0]*((spot-today).days)/conv)
+    
+    def descuentos(df=df,desc_1_dia=desc_1_dia):
+        x=df["Tasa"]
+        tau=df["Tau"]
+        aux=np.array(np.zeros([len(x)]))
+        aux[0]=desc_1_dia*(1+x[0]*tau[0])**(-1)
+        for i in range(1,len(x)):
+            aux[i]=(1-x[i]*sum(tau[:i]*aux[:i]))/(1+x[i]*tau[i])
+        return(aux)
             
-df["Descuentos"]=descuentos(df,desc_1_dia)
+    df["Descuentos"]=descuentos(df,desc_1_dia)
+else:
+    
