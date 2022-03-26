@@ -83,7 +83,9 @@ df = pd.merge(df,tasas, on = "Cupon", how="left")
 
 #Auxiliar para convertir a número
 aux_0=pd.isnull(df["Tasa"])
-aux_1=(df["Payment Date"][aux_0==False].dt.strftime("%Y%m%d").astype(int)).to_numpy()
+aux_1=(df["Payment Date"][aux_0==False]).apply(lambda x: (x-datetime(today.year, 
+                                                             today.month, 
+                                                             today.day)).days)
 aux_2=(df["Tasa"][aux_0==False]).to_numpy()
 
 #Qué tipo decidimos
@@ -96,8 +98,9 @@ else:
 int_lin=interpolate.interp1d(aux_1,aux_2,kind=metodo)
 
 #fechas faltantes
-aux_3=(df["Payment Date"][aux_0].dt.strftime("%Y%m%d").astype(int)).to_numpy()
-
+aux_3=(df["Payment Date"][aux_0]).apply(lambda x: (x-datetime(today.year, 
+                                                             today.month, 
+                                                             today.day)).days)
 #llenamos
 df.loc[df.Tasa.isnull(), 'Tasa'] = int_lin(aux_3)
 
@@ -116,4 +119,3 @@ def descuentos(df=df,desc_1_dia=desc_1_dia):
     return(aux)
             
 df["Descuentos"]=descuentos(df,desc_1_dia)
-
