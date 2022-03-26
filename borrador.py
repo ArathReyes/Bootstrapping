@@ -115,7 +115,7 @@ def descuentos(df=df,desc_1_dia=desc_1_dia):
     aux=np.array(np.zeros([len(x)]))
     aux[0]=desc_1_dia*(1+x[0]*tau[0])**(-1)
     for i in range(1,len(x)):
-        aux[i]=(desc_1_dia-x[i]*sum(tau[:i]*aux[:i]))/(1+x[i]*tau[i])
+        aux[i]=(1-x[i]*sum(tau[:i]*aux[:i]))/(1+x[i]*tau[i])
     return(aux)
             
 df["Descuentos"]=descuentos(df,desc_1_dia)
