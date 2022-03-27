@@ -144,8 +144,34 @@ class Bootstrapping:
         return
     
     def plots(self):
-        ax = sns.lineplot(self.summary['Payment Date'], self.summary['Descuentos'])
-        ax.set_title(self.interpolacion)
-        plt.show()
-        
-        
+        Bool = True
+        while Bool:
+            print("\n")
+            choice = input("Si deseas ver los descuentos teclea 'descuentos', si deseas\
+                                ver las tasas teclea 'tasas' o si deseas salir escribe '0':\n")
+            if choice == 'descuentos' or choice =='tasas' or choice == '0':
+                Bool = False
+            else:
+                print('\nTu elección no es válida')
+        if choice == 'descuentos':
+            sns.set_style('darkgrid')
+            sns.set_palette('tab10')
+            plt.figure(figsize = (12,8))
+            ax = sns.lineplot(x = self.summary['Payment Date'], y = self.summary['Descuentos'])
+            ax.set_title("Descuentos por "+self.interpolacion,fontsize = '25')
+            plt.show()
+        elif choice == 'tasas' and self.interpolacion == "Interpolación Lineal en Tasas Par-Swap":
+            sns.set_style('darkgrid')
+            sns.set_palette('tab10')
+            plt.figure(figsize = (12,8))
+            ax = sns.lineplot(x = self.summary['Payment Date'], y = self.summary['Tasa'], color = 'red')
+            ax.set_title("Tasas por "+self.interpolacion,fontsize = '25')
+            plt.show()
+        elif choice == 'tasas' and self.interpolacion == "Interpolación Lineal en Tasas Continua":
+            sns.set_style('darkgrid')
+            sns.set_palette('tab10')
+            plt.figure(figsize = (12,8))
+            ax = sns.lineplot(x = self.summary['Payment Date'], y = self.summary['Continua'], color = 'red')
+            ax.set_title("Tasas por "+self.interpolacion,fontsize = '25')
+            plt.show()
+        return
