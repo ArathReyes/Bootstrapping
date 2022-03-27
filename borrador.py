@@ -136,12 +136,40 @@ else:
     aux = tasas[1:]
     aux = aux.reset_index(drop = True)
     from scipy.optimize import fsolve
+    def interpolacion_aux(x,xi,x1,x0,y0):
+        return y0 + (xi-x0).days*(x-y0)/(x1-x0).days
+    def acum(x,fechas, cum):
+        fechas = fechas.reset_index(drop = True)
+        num_cupant = fechas['Cupon'][0]-1
+        num_cupact = fechas['Cupon'][len(fechas)-1]
+        x0 = df['Payment Date'][num_cupant-1]
+        x1 = df['Payment Date'][num_cupact-1]
+        y0 = aux['Tasa'][num_cupant-1]
+
+        for i in range(fechas['Cupon'][0],fechas['Cupon'][len(fechas)-1]):
+            xi = df['Payment Date'][i-1]
+            cum += df['Tau'][i-1]*np.exp(-interpolacion_aux(x,xi,x1,x0,y0)*df['Plazo'][i-1])
+            #cum += tau_i * np.exp(-interpolacion(x,fecha_cuponant, fecha_cupon_i,tasa_cuponant)*plazo_cupon_i)
+        return cum + df['Tau'][num_cupact-1]*np.exp(-x*df['Plazo'][num_cupact-1])
+    
     for i in range(1,len(aux)):
-        f = lambda x: (desc_1_dia - np.exp(-x*df['Plazo'][i]))/(cum + df['Tau'][i]*np.exp(-x*df['Plazo'][i]))-aux['Tasa'][i]
+        fechas = df[['Payment Date', 'Cupon']][aux['Cupon'][i-1]:aux['Cupon'][i]]
+        f = lambda x: (desc_1_dia - np.exp(-x*df['Plazo'][i]))/(acum(x,fechas,cum)) -aux['Tasa'][i]
         X.append(fsolve(f,0)[0])
-        Y.append(np.exp(-X[i]*df['Plazo'][i]))
-        cum += Y[i]*df['Tau'][i]
-        Z.append((desc_1_dia-Y[i])/cum)
+        # interpolar entre nx1 ant y nx1 actual
+        X1 = df['Payment Date'][aux['Cupon'][i-1]-1: aux['Cupon'][i]]
+        X1 = list(X1)
+        X1 = [X1[0], X1[-1]]
+        Y1 = df['Tasa'][aux['Cupon'][i-1]-1: aux['Cupon'][i]-1]
+        Y1 = list(Y1)
+        Y1 = [Y1[0], Y1[-1]]
+        Y1.append(X[-1])
+        df['Tasa'][aux['Cupon'][i-1]-1: aux['Cupon'][i]] = df['Payment Date'][aux['Cupon'][i-1]-1: aux['Cupon'][i]].apply(interpolacion_lineal_cont, args = (X1,Y1))
+        
+        Y += list(np.exp(-df['Tasa'][aux['Cupon'][i-1]: aux['Cupon'][i]]*df['Plazo'][aux['Cupon'][i-1]: aux['Cupon'][i]]))
+        for j in range(aux['Cupon'][i-1], aux['Cupon'][i]):
+            cum+= Y[j]*df['Tau'][j]
+        # Z.append((desc_1_dia-Y[i])/cum)
     tasas['Continua']= [0] + X
     tasas['Descuentos'] = [0] + Y
     del X,Y,Z,cum,aux
