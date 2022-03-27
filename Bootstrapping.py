@@ -8,14 +8,13 @@ Created on Thu Mar 24 18:05:27 2022
     Natasha Monserrath Ortiz Castañeda
 """
 
-from pathlib import Path #Para conocer el path actual
+from pathlib import Path #Para conocer el path actual, para futuros cambios
 from datetime import datetime, timedelta #Para las fechas
 from pandas.tseries.offsets import BDay # Días hábiles
 import numpy as np
 import pandas as pd #Para dataframes
 import seaborn as sns # Graficar
 import matplotlib.pyplot as plt
-from scipy import interpolate #Para interpolación linear y spline
 
 class Bootstrapping:
     
@@ -31,7 +30,6 @@ class Bootstrapping:
         today = datetime(today.year, today.month, today.day)
         spot = today + BDay(1)
         
-        act_360 = True
         if act_360 == True:
             conv = 360
         else:
@@ -50,6 +48,7 @@ class Bootstrapping:
                     b = (X[i+1] - X[i]).days
                     return Y[i] + (x - X[i]).days*(a/b)
             return "No es posible interpolar"
+        
         n=390 # Número de cupones
         #path de la carpeta
         path ='C:\\Users\\Arath Reyes\\Documents\\GitHub\\Bootstrapping\\data\\'
@@ -86,6 +85,7 @@ class Bootstrapping:
         
         # Agregar las tasas
         df = pd.merge(df,tasas, on = "Cupon", how="left")
+        
         desc_1_dia=np.exp(-tasas["Tasa"][0]*((spot-today).days)/conv)
         if par_swap:
             self.interpolacion = "Interpolación Lineal en Tasas Par-Swap"
@@ -107,10 +107,10 @@ class Bootstrapping:
                                                                           today.month, 
                                                                           today.day)).days/conv)
             desc_29_dias = desc_1_dia / (1+(tasas['Tasa'][1]*(df['Payment Date'][0]-df['Start Date'][0]).days /conv))
-            X = [-np.log(desc_29_dias)/df['Plazo'][0]]
-            Y = [np.exp(-X[0]*df['Plazo'][0])]
+            X = [-np.log(desc_29_dias)/df['Plazo'][0]] # Continuas
+            Y = [np.exp(-X[0]*df['Plazo'][0])] # Descuentos
             cum = Y[0]*df['Tau'][0]
-            Z = [(desc_1_dia - Y[0])/cum]
+            Z = [(desc_1_dia - Y[0])/cum] # Par-Swap Teóricas
             aux = tasas[1:]
             aux = aux.reset_index(drop = True)
             from scipy.optimize import fsolve
@@ -122,8 +122,9 @@ class Bootstrapping:
                 Z.append((desc_1_dia-Y[i])/cum)
             tasas['Continua']= [0] + X
             tasas['Descuentos'] = [0] + Y
+            tasas['Par-Swap'] = [0] + Z
             del X,Y,Z,cum,aux
-            df = pd.merge(df,tasas[['Cupon','Continua','Descuentos']], on = "Cupon", how="left")
+            df = pd.merge(df,tasas[['Cupon','Continua','Descuentos', 'Par-Swap']], on = "Cupon", how="left")
             aux = pd.merge(tasas[1:], df[['Continua', 'Payment Date']], on = 'Continua', how = 'left')
             X = list(aux['Payment Date'])
             Y = list(aux['Tasa'])
