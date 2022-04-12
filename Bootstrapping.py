@@ -20,6 +20,10 @@ class Bootstrapping:
     
     def __init__(self):
         self.summary = None
+        self.df = None
+        self.aux = None
+        self.desc_1_dia = None
+        self.desc_29_dias = None
         self.descuentos = None
         self.convencion = None
         self.interpolacion = None
@@ -51,15 +55,12 @@ class Bootstrapping:
         
         def f(x,*index):
             i = index
-            global df
-            global aux
-            global desc_29_dias
-            global desc_1_dia
-            #Hay tasa para comparar?
-            if np.isnan(df["Tasa"][i]):
-                return 0
+            i=i[0]
+            df = self.df
+            aux = self.aux
+            desc_1_dia = self.desc_1_dia
             #Cambio
-            df["Continua"][i]=x
+            df.loc[i,"Continua"]=x
             #interpolación
             X = list(aux['Payment Date'])
             Y = list(aux['Continua'])
@@ -71,9 +72,12 @@ class Bootstrapping:
             #Tasa par-swap teórica
             df["Par"]=np.zeros(len(df["Tasa"]))
             for i in range(len(df["Tasa"])):
-                df["Par"][i]=(desc_1_dia-df["Descuentos"][i])/(sum(df["Descuento"][:i+1]*df["Tau"][i:i+1]))
-            
-            return df["Tasa"][i]-df["Par"][i]
+                df.loc[i,"Par"]=(desc_1_dia-df.loc[i,"Descuentos"])/(sum(df.loc[:(i+1),"Descuentos"]*df.loc[:i+1,"Tau"]))
+            df["dif"]=(df["Tasa"]-df["Par"])*(10**8)
+            self.df=df
+            self.aux=aux
+            return (df.loc[i,"Tasa"]-df.loc[i,"Par"])*(10**8)
+        
         n=390 # Número de cupones
         #path de la carpeta
         #path ='C:\\Users\\Arath Reyes\\Documents\\GitHub\\Bootstrapping\\data\\'
@@ -112,6 +116,7 @@ class Bootstrapping:
         df = pd.merge(df,tasas, on = "Cupon", how="left")
         
         desc_1_dia=np.exp(-tasas["Tasa"][0]*((spot-today).days)/conv)
+        self.desc_1_dia = desc_1_dia
         if par_swap:
             
             #Interpolamos
@@ -131,45 +136,45 @@ class Bootstrapping:
             del aux
         else:
             
-            desc_29_dias = desc_1_dia / (1+(tasas['Tasa'][1]*(df['Payment Date'][0]-df['Start Date'][0]).days /conv))
+            desc_29_dias = desc_1_dia / (1+(tasas.loc[1,'Tasa']*(df.loc[0,'Payment Date']-df.loc[0,'Start Date']).days /conv))
             
+            self.desc_29_dias = desc_29_dias
             #Plazos y tasas continuas
             self.interpolacion = "Interpolación Lineal en Tasas Continua"
             df["Plazo"]=(df["Payment Date"]).apply(lambda x: (x-datetime(today.year, 
                                                                           today.month, 
                                                                           today.day)).days/conv)
-            aux = pd.merge(tasas[1:], df[['Tasa', 'Payment Date',"Plazo","Tau"]], on = 'Tasa', how = 'left')
+            aux = pd.merge(tasas[1:], df[['Payment Date',"Plazo","Cupon"]], on = 'Cupon', how = 'left')
             #Inicializamos tasa continua
-            aux["Continua"]=np.NaN
-            aux["Continua"][0]=-np.log(desc_29_dias/aux["Plazo"][0])
-            aux["Continua"][1:]=np.random.uniform(0,0.10,(len(aux["Plazo"])-1))
+            aux["Continua"]=np.nan
+            aux.loc[0,"Continua"]=-np.log(desc_29_dias)/aux.loc[0,"Plazo"]
+            aux.loc[1:,"Continua"]=np.random.uniform(0.06,0.09,(len(aux["Plazo"])-1))
             cols_to_use= list(aux.columns.difference(df.columns))
             cols_to_use.append("Cupon")
             df = pd.merge(aux[cols_to_use], df, on = 'Cupon', how = 'right')
             del cols_to_use
             X = list(aux['Payment Date'])
             Y = list(aux['Continua'])
+            opt_aux=pd.notna(df["Continua"])
             df['Continua'] = df['Payment Date'].apply(interpolacion_lineal_cont, args = (X,Y))
             del X,Y
-            print(df["Continua"])
             #Sacamos los descuentos
             df["Descuentos"]=np.exp(-df["Continua"]*df["Plazo"])
-            print(df["Descuentos"])
-            
             #Tasa par-swap teórica
             df["Par"]=np.zeros(len(df["Tasa"]))
             for i in range(len(df["Tasa"])):
                 df.loc[i,"Par"]=(desc_1_dia-df.loc[i,"Descuentos"])/(sum(df.loc[:i+1,"Descuentos"]*df.loc[:i+1,"Tau"]))
-            print(df["Par"])
             #Diferencia
-            df["dif"]=df["Tasa"]-df["Par"]
-            print("YA casiiii")
+            df["dif"]=(df["Tasa"]-df["Par"])*(10**8)
             #Optimización
+            self.df = df
+            self.aux= aux
             
             from scipy.optimize import fsolve
             for i in range(0,len(df["Cupon"])):
-                fsolve(f,0,args=(i))
-                print(df)
+                #Hay tasa para comparar?
+                if opt_aux[i]:
+                    fsolve(f,0,args=(i))
             # #Tasa continua
             # aux2["Continua"]=-np.log(aux2["Descuento"]/aux2["Plazo"])
             
