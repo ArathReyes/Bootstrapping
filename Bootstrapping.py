@@ -25,9 +25,13 @@ class Bootstrapping:
         self.interpolacion = None
         
         
-    def  compute(self, par_swap =True,  inhabiles = [], act_360 = True, diahabant = True, archivo = "datos.xlsx"):
-        today = datetime.now()
-        today = datetime(today.year, today.month, today.day)
+    def  compute(self, par_swap =True,  date = None, inhabiles = [], act_360 = True, diahabant = True, archivo = "datos.xlsx"):
+        if date == None:
+            today = datetime.now()
+            today = datetime(today.year, today.month, today.day)
+        else:
+            today = datetime(int(date[:2]), int(date[3:5]), int(date[-4:]))
+        
         spot = today + BDay(1)
         
         if act_360 == True:
@@ -176,3 +180,8 @@ class Bootstrapping:
             ax.set_title("Tasas por "+self.interpolacion,fontsize = '25')
             plt.show()
         return
+
+date = "25/05/2022"
+boot = Bootstrapping()
+boot.compute()
+boot.summary.to_excel("resultados.xlsx")
