@@ -30,7 +30,7 @@ class Bootstrapping:
             today = datetime.now()
             today = datetime(today.year, today.month, today.day)
         else:
-            today = datetime(int(date[:2]), int(date[3:5]), int(date[-4:]))
+            today = datetime( int(date[-4:]), int(date[3:5]), int(date[:2]))
         
         spot = today + BDay(1)
         
@@ -183,5 +183,5 @@ class Bootstrapping:
 
 date = "25/05/2022"
 boot = Bootstrapping()
-boot.compute()
+boot.compute(date = date)
 boot.summary.to_excel("resultados.xlsx")
